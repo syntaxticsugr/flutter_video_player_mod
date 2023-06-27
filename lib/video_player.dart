@@ -13,6 +13,13 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 
 import 'src/closed_caption_file.dart';
 
+////////////////////For YouTube Video Support/////////////////////
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+//////////////////////////////////////////////////////////////////
+
 export 'package:video_player_platform_interface/video_player_platform_interface.dart'
     show DurationRange, DataSourceType, VideoFormat, VideoPlayerOptions;
 
@@ -374,9 +381,20 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
         );
         break;
       case DataSourceType.network:
+        ///////////////////////For YouTube Video Support//////////////////////////
+        String networkDataSource = dataSource;
+        if (_getIdFromUrl(dataSource) != null) {
+          try {
+            String? _videoId = _getIdFromUrl(dataSource);
+            var yt = YoutubeExplode();
+            var manifest = await yt.videos.streamsClient.getManifest(_videoId);
+            networkDataSource = manifest.muxed.last.url.toString();
+          } catch (err) {}
+        }
+        //////////////////////////////////////////////////////////////////////////
         dataSourceDescription = DataSource(
           sourceType: DataSourceType.network,
-          uri: dataSource,
+          uri: networkDataSource,,
           formatHint: formatHint,
           httpHeaders: httpHeaders,
         );
@@ -467,6 +485,32 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
         .listen(eventListener, onError: errorListener);
     return initializingCompleter.future;
   }
+
+  //////////////////////////For YouTube Video Support///////////////////////////
+  ///////////////////////////To Get VideoID From URL////////////////////////////
+  static String? _getIdFromUrl(String url, [bool trimWhitespaces = true]) {
+    List<RegExp> _regexps = [
+      RegExp(
+          r'^https:\/\/(?:www\.|m\.)?youtube\.com\/watch\?v=([_\-a-zA-Z0-9]{11}).*$'),
+      RegExp(
+          r'^https:\/\/(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/embed\/([_\-a-zA-Z0-9]{11}).*$'),
+      RegExp(r'^https:\/\/youtu\.be\/([_\-a-zA-Z0-9]{11}).*$')
+    ];
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+    if (trimWhitespaces) {
+      url = url.trim();
+    }
+    for (RegExp exp in _regexps) {
+      final Match? match = exp.firstMatch(url);
+      if (match != null && match.groupCount >= 1) {
+        return match.group(1);
+      }
+    }
+    return null;
+  }
+  //////////////////////////////////////////////////////////////////////////////
 
   @override
   Future<void> dispose() async {
