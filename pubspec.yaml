@@ -30,6 +30,9 @@ dependencies:
   http: ^1.1.0
   youtube_explode_dart: ^1.12.4
 
+dependency_overrides:
+  http: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
